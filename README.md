@@ -1,5 +1,11 @@
-## 使用方式
+## Dependency
+pytorch, opencv-python, pandas, numpy, pillow
+```bash
+pip install torch torchvision pandas numpy opencv-python Pillow
+```
+
+## usage
 ```python
-python main.py --mode train --epochs 50 //訓練模型
-python3 main.py --mode test //測試
+python3 main.py --mode train --epochs 50 // training model
+python3 main.py --mode test // test
 ```
