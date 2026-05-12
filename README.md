@@ -1,7 +1,8 @@
 ## Dependency
 pytorch, opencv-python, pandas, numpy, pillow
 ```bash
-pip install torch torchvision pandas numpy opencv-python Pillow
+pip install torch torchvision pandas numpy opencv-python Pillow matplotlib scikit-learn
+
 ```
 
 ## usage
