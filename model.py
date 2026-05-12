@@ -14,13 +14,13 @@ class EmotionCNN(nn.Module):
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
         self.bn2 = nn.BatchNorm2d(64)
         
-        # Conv Block 3 (新增): 12x12 -> 6x6，進一步萃取高階語義特徵
+        # Conv Block 3 : 12x12 -> 6x6
         self.conv3 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
         self.bn3 = nn.BatchNorm2d(128)
         
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
         
-        # 參數大幅減少: 128 * 6 * 6 = 4608
+        # 128 * 6 * 6 = 4608
         self.fc1 = nn.Linear(128 * 6 * 6, 256)
         # 降低 Dropout 比例，避免在小資料集上過度破壞特徵
         self.dropout = nn.Dropout(p=0.3) 

@@ -5,11 +5,9 @@ from data_loader import get_dataloaders
 def evaluate_model(data_path):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
-    # 定義標籤映射表
     emotion_labels = ['Anger', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral', 'Contempt']
     
-    # 取得測試資料載入器 (內含每類最後 3 張，共 24 張)
-    _, test_loader = get_dataloaders(data_path, batch_size=8) # 減小 batch 以利觀察
+    _, test_loader = get_dataloaders(data_path, batch_size=8)
     
     model = EmotionCNN().to(device)
     try:
@@ -33,7 +31,6 @@ def evaluate_model(data_path):
             outputs = model(images)
             _, predicted = torch.max(outputs, 1)
             
-            # 遍歷目前批次中的每一個樣本
             for i in range(images.size(0)):
                 true_idx = labels[i].item()
                 pred_idx = predicted[i].item()
@@ -41,7 +38,6 @@ def evaluate_model(data_path):
                 true_name = emotion_labels[true_idx]
                 pred_name = emotion_labels[pred_idx]
                 
-                # 判斷是否正確，使用符號標記以便快速掃視
                 status = "✓" if true_idx == pred_idx else "✗"
                 
                 sample_id = total + i + 1
