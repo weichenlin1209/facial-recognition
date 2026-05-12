@@ -15,7 +15,7 @@ class FERDataset(Dataset):
         self.train_transform = transforms.Compose([
             transforms.ToPILImage(),
             transforms.RandomRotation(10),       
-            # transforms.RandomHorizontalFlip(),   # 50% 機率水平翻轉
+            transforms.RandomHorizontalFlip(),   # 50% 機率水平翻轉
             transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)), 
             transforms.ToTensor()
         ])
