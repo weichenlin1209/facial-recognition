@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from torchvision import transforms
 from PIL import Image
+import cv2
 
 class FERDataset(Dataset):
     def __init__(self, dataframe, is_train=True):
@@ -14,9 +15,11 @@ class FERDataset(Dataset):
         
         self.train_transform = transforms.Compose([
             transforms.ToPILImage(),
-            transforms.RandomRotation(10),       
-            transforms.RandomHorizontalFlip(),   # 50% 機率水平翻轉
-            transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)), 
+            transforms.RandomAffine(degrees=0, translate=(0.05, 0.05), scale=(0.95, 1.05), shear=3),
+            transforms.RandomRotation(10),
+            transforms.ColorJitter(brightness=0.15, contrast=0.15),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
             transforms.ToTensor()
         ])
         
@@ -27,16 +30,25 @@ class FERDataset(Dataset):
 
     def __len__(self):
         return len(self.labels)
-
+    
     def __getitem__(self, idx):
+        # 1. 取得原始 NumPy 陣列
         img_np = self.data[idx]
         
+        # 2. 注入 CLAHE 光學濾波器 (增強對比度)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+        img_np = clahe.apply(img_np)
+        
+        # 3. 根據狀態套用轉換管線
         if self.is_train:
             img_tensor = self.train_transform(img_np)
         else:
             img_tensor = self.test_transform(img_np)
             
+        # 4. 提取對應的標籤並轉換為張量 (Tensor)
         label_tensor = torch.tensor(self.labels[idx], dtype=torch.long)
+        
+        # 5. 必須明確回傳包含特徵與標籤的 Tuple
         return img_tensor, label_tensor
 
 def get_dataloaders(csv_file, batch_size=32):
@@ -54,7 +66,7 @@ def get_dataloaders(csv_file, batch_size=32):
     sample_weights = np.array([class_weights[t] for t in train_labels])
     sample_weights = torch.tensor(sample_weights, dtype=torch.float)
     
-    target_samples_per_epoch = 8 * 600
+    target_samples_per_epoch = 8 * 300
     
     sampler = WeightedRandomSampler(
         weights=sample_weights,
