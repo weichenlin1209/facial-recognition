@@ -1,5 +1,5 @@
 import torch
-from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler # 新增匯入
+from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 import pandas as pd
 import numpy as np
 from torchvision import transforms
@@ -12,43 +12,38 @@ class FERDataset(Dataset):
         pixels = [np.fromstring(p, dtype=np.uint8, sep=' ').reshape(48, 48) for p in dataframe['pixels']]
         self.data = pixels
         self.is_train = is_train
-        
-        self.train_transform = transforms.Compose([
+
+        train_transforms_list = [
             transforms.ToPILImage(),
-            transforms.RandomAffine(degrees=0, translate=(0.05, 0.05), scale=(0.95, 1.05), shear=3),
-            transforms.RandomRotation(10),
-            transforms.ColorJitter(brightness=0.15, contrast=0.15),
             transforms.RandomHorizontalFlip(),
-            transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
-            transforms.ToTensor()
-        ])
-        
+            transforms.RandomRotation(10),
+            transforms.RandomCrop(48, padding=4),
+            transforms.ColorJitter(brightness=0.15, contrast=0.15),
+            transforms.ToTensor(),
+        ]
+        self.train_transform = transforms.Compose(train_transforms_list)
+
         self.test_transform = transforms.Compose([
             transforms.ToPILImage(),
-            transforms.ToTensor()
+            transforms.ToTensor(),
         ])
 
     def __len__(self):
         return len(self.labels)
-    
+
     def __getitem__(self, idx):
-        # 1. 取得原始 NumPy 陣列
         img_np = self.data[idx]
-        
-        # 2. 注入 CLAHE 光學濾波器 (增強對比度)
-        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
         img_np = clahe.apply(img_np)
-        
-        # 3. 根據狀態套用轉換管線
+
         if self.is_train:
             img_tensor = self.train_transform(img_np)
         else:
             img_tensor = self.test_transform(img_np)
-            
-        # 4. 提取對應的標籤並轉換為張量 (Tensor)
+
         label_tensor = torch.tensor(self.labels[idx], dtype=torch.long)
-        
-        # 5. 必須明確回傳包含特徵與標籤的 Tuple
+
         return img_tensor, label_tensor
 
 def get_dataloaders(csv_file, batch_size=32):
