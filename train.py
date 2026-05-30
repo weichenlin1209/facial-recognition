@@ -26,13 +26,14 @@ def train_model(data_path, epochs):
     model = EmotionCNN().to(device)
     train_loader, test_loader = get_dataloaders(data_path)
     
-    criterion = nn.CrossEntropyLoss()
-    # 引入 weight_decay 進行 L2 正則化 (L2 Regularization) 以對抗過擬合
-    optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-4)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.5)
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
+    optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=5e-4)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=7, min_lr=1e-6)
     
     loss_history = []
     best_accuracy = 0.0
+    epochs_no_improve = 0
+    early_stop_patience = 15
     
     print(f"Initiating Training Sequence: {epochs} Epochs")
     for epoch in range(epochs):
@@ -51,24 +52,28 @@ def train_model(data_path, epochs):
             
             total_loss += loss.item()
             
-        scheduler.step()
         avg_loss = total_loss / len(train_loader)
         loss_history.append(avg_loss)
         
-        # 即時驗證與最佳狀態捕捉
         current_accuracy = evaluate_current_model(model, test_loader, device)
+        scheduler.step(current_accuracy)
         
-        # 為了保持終端機整潔，僅在遇到最佳解或每 5 個 Epoch 時輸出狀態
         if current_accuracy > best_accuracy or (epoch + 1) % 5 == 0 or epoch == 0:
             log_str = f"Epoch {epoch+1:03d}/{epochs} | Avg Loss: {avg_loss:.4f} | LR: {optimizer.param_groups[0]['lr']:.6f} | Val Acc: {current_accuracy:.2f}%"
             
             if current_accuracy > best_accuracy:
                 best_accuracy = current_accuracy
-                # 僅在正確率突破歷史極值時，將張量狀態寫入硬碟
+                epochs_no_improve = 0
                 torch.save(model.state_dict(), "fer_model.pth")
                 log_str += " -> [Checkpoint Updated]"
+            else:
+                epochs_no_improve += 1
                 
             print(log_str)
+        
+        if epochs_no_improve >= early_stop_patience:
+            print(f"Early stopping triggered after {epoch+1} epochs (no improvement for {early_stop_patience} epochs).")
+            break
     
     # --- 繪圖與輸出 SVG 子程序 ---
     print("\nOptimization sequence terminated.")

@@ -16,10 +16,11 @@ class FERDataset(Dataset):
         train_transforms_list = [
             transforms.ToPILImage(),
             transforms.RandomHorizontalFlip(),
-            transforms.RandomRotation(10),
-            transforms.RandomCrop(48, padding=4),
-            transforms.ColorJitter(brightness=0.15, contrast=0.15),
+            transforms.RandomRotation(15),
+            transforms.RandomCrop(48, padding=6),
+            transforms.ColorJitter(brightness=0.2, contrast=0.2),
             transforms.ToTensor(),
+            transforms.RandomErasing(p=0.25, scale=(0.02, 0.15)),
         ]
         self.train_transform = transforms.Compose(train_transforms_list)
 

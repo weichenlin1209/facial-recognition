@@ -4,14 +4,15 @@ from infer import run_inference as run_cnn_inference
 from test import evaluate_model
 from train_svm import train_svm
 from predict import run_inference as run_unified_inference
+from predict import evaluate_svm_on_test
 
 def main():
     parser = argparse.ArgumentParser(description="Facial Emotion Recognition (FER) System")
 
     parser.add_argument('--mode', type=str,
-                        choices=['train', 'test', 'infer', 'train_svm', 'predict'],
+                        choices=['train', 'test', 'infer', 'train_svm', 'test_svm', 'predict'],
                         required=True,
-                        help='Mode: "train", "test", "infer" (CNN), "train_svm" (SVM on CNN features), "predict" (CNN+SVM unified).')
+                        help='Mode: "train", "test" (CNN), "infer" (CNN single image), "train_svm", "test_svm" (CNN+SVM on test set), "predict" (CNN+SVM single image).')
     parser.add_argument('--data_path', type=str, default='dataset/CK+ Dataset.csv',
                         help='Path to the dataset CSV file.')
     parser.add_argument('--image_path', type=str, default=None,
@@ -41,6 +42,10 @@ def main():
     elif args.mode == 'train_svm':
         print("Training SVM on CNN features...")
         train_svm(args.data_path, args.cnn_checkpoint, args.svm_model)
+
+    elif args.mode == 'test_svm':
+        print("Evaluating CNN+SVM on test set...")
+        evaluate_svm_on_test(args.data_path, args.cnn_checkpoint, args.svm_model)
 
     elif args.mode == 'predict':
         if not args.image_path:

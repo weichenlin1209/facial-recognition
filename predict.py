@@ -2,7 +2,9 @@ import torch
 import cv2
 import numpy as np
 import joblib
+import matplotlib.pyplot as plt
 from model import EmotionCNN
+from data_loader import get_dataloaders
 
 EMOTION_LABELS = ['Anger', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral', 'Contempt']
 
@@ -61,6 +63,77 @@ def run_inference(image_path, mode='cnn_svm'):
 
     print(f"Predicted emotion: {pred}")
     return pred
+
+def evaluate_svm_on_test(data_path, cnn_checkpoint="fer_model.pth", svm_model_path="svm_model.joblib"):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    num_classes = len(EMOTION_LABELS)
+
+    model = EmotionCNN().to(device)
+    model.load_state_dict(torch.load(cnn_checkpoint, weights_only=True))
+    model.eval()
+
+    svm_model = joblib.load(svm_model_path)
+
+    _, test_loader = get_dataloaders(data_path, batch_size=8)
+
+    all_preds, all_trues = [], []
+
+    print("=" * 60)
+    print(f"{'ID':<5} | {'True Label':<14} | {'Pred Label':<14} | Status")
+    print("-" * 60)
+
+    with torch.no_grad():
+        for images, labels in test_loader:
+            images = images.to(device)
+            feats = model(images, extract_features=True)
+            feats_np = feats.cpu().numpy()
+            preds = svm_model.predict(feats_np)
+
+            for i in range(images.size(0)):
+                true_idx = labels[i].item()
+                pred_idx = preds[i]
+                true_name = EMOTION_LABELS[true_idx]
+                pred_name = EMOTION_LABELS[pred_idx]
+                status = "\u2713" if true_idx == pred_idx else "\u2717"
+                sample_id = len(all_trues) + i + 1
+                print(f"{sample_id:02d}    | {true_name:<14} | {pred_name:<14} | {status}")
+
+            all_preds.extend(preds)
+            all_trues.extend(labels.numpy())
+
+    cm = np.zeros((num_classes, num_classes), dtype=int)
+    for t, p in zip(all_trues, all_preds):
+        cm[t, p] += 1
+
+    correct = np.trace(cm)
+    total = np.sum(cm)
+    accuracy = 100.0 * correct / total
+
+    print("-" * 60)
+    print(f"CNN+SVM Test Summary: Accuracy {accuracy:.2f}% ({correct}/{total})")
+    print("=" * 60)
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+    cax = ax.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
+    fig.colorbar(cax)
+    tick_marks = np.arange(num_classes)
+    ax.set_xticks(tick_marks)
+    ax.set_yticks(tick_marks)
+    ax.set_xticklabels(EMOTION_LABELS, rotation=45, ha="right")
+    ax.set_yticklabels(EMOTION_LABELS)
+    ax.set_ylabel('True Label')
+    ax.set_xlabel('Predicted Label')
+    ax.set_title('CNN+SVM Confusion Matrix')
+    thresh = cm.max() / 2.
+    for i in range(num_classes):
+        for j in range(num_classes):
+            ax.text(j, i, format(cm[i, j], 'd'),
+                    ha="center", va="center",
+                    color="white" if cm[i, j] > thresh else "black")
+    plt.tight_layout()
+    plt.savefig('confusion_matrix_svm.svg', format='svg')
+    plt.close()
+    print("Confusion Matrix saved as confusion_matrix_svm.svg")
 
 if __name__ == '__main__':
     import argparse

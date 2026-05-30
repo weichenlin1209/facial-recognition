@@ -30,18 +30,16 @@ def train_svm(data_path, cnn_checkpoint="fer_model.pth", svm_output="svm_model.j
         print(f"Error: CNN checkpoint '{cnn_checkpoint}' not found. Train the CNN first.")
         return
 
-    train_loader, test_loader = get_dataloaders(data_path, batch_size=32)
+    train_loader, _ = get_dataloaders(data_path, batch_size=32)
 
     print("Extracting CNN features for SVM training...")
     X_train, y_train = extract_features(model, train_loader, device)
-    X_test, y_test = extract_features(model, test_loader, device)
 
     print(f"Train feature matrix: {X_train.shape}")
-    print(f"Test  feature matrix: {X_test.shape}")
 
     param_grid = {
-        'C': [0.1, 1, 10, 100],
-        'kernel': ['linear', 'rbf', 'poly'],
+        'C': [0.01, 0.1, 0.5, 1.0],
+        'kernel': ['linear', 'rbf'],
         'gamma': ['scale', 'auto'],
     }
 
@@ -60,12 +58,6 @@ def train_svm(data_path, cnn_checkpoint="fer_model.pth", svm_output="svm_model.j
     print(f"Training accuracy with best SVM: {train_acc:.4f}")
     print("\nClassification report (train):")
     print(classification_report(y_train, y_pred, target_names=EMOTION_LABELS))
-
-    y_test_pred = grid_search.predict(X_test)
-    test_acc = accuracy_score(y_test, y_test_pred)
-    print(f"\nTest accuracy with best SVM: {test_acc:.4f}")
-    print("\nClassification report (test):")
-    print(classification_report(y_test, y_test_pred, target_names=EMOTION_LABELS))
 
     joblib.dump(grid_search.best_estimator_, svm_output)
     print(f"SVM model saved to '{svm_output}'")
