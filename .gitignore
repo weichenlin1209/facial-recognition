@@ -1,2 +1,7 @@
 /venv
 __pycache__
+confusion_matrix.svg
+confusion_matrix_svm.svg
+fer_model.pth
+fer_model_bak.pth
+svm_model.joblib

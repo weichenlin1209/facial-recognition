@@ -19,23 +19,14 @@ class EmotionCNN(nn.Module):
         self.bn3 = nn.BatchNorm2d(128)
         
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
-        
-        # 新增空間丟棄層 (Spatial Dropout)，隨機丟棄整個特徵圖
-        self.spatial_dropout = nn.Dropout2d(p=0.2) 
-        
-        self.fc1 = nn.Linear(128 * 6 * 6, 256)
-        # 提高 Dropout 比例至 0.5，強制 FC 層學習穩健特徵
-        self.dropout = nn.Dropout(p=0.5) 
-        
-        self.fc2 = nn.Linear(256, 8)
+
+        self.fc1 = nn.Linear(128 * 6 * 6, 128)
+        self.dropout = nn.Dropout(p=0.5)
+        self.fc2 = nn.Linear(128, 8)
 
     def forward(self, x, extract_features=False):
         x = self.pool(F.leaky_relu(self.bn1(self.conv1(x)), 0.1))
-        x = self.spatial_dropout(x) # 套用空間雜訊
-        
         x = self.pool(F.leaky_relu(self.bn2(self.conv2(x)), 0.1))
-        x = self.spatial_dropout(x) # 套用空間雜訊
-        
         x = self.pool(F.leaky_relu(self.bn3(self.conv3(x)), 0.1))
         
         x = x.view(-1, 128 * 6 * 6)

@@ -24,43 +24,42 @@ def train_model(data_path, epochs):
     print(f"Allocating computations to: {device}")
     
     model = EmotionCNN().to(device)
-    train_loader, test_loader = get_dataloaders(data_path)
-    
-    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
+    train_loader, val_loader, _ = get_dataloaders(data_path)
+
+    criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=5e-4)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=7, min_lr=1e-6)
-    
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.5)
+
     loss_history = []
     best_accuracy = 0.0
     epochs_no_improve = 0
-    early_stop_patience = 15
-    
+    early_stop_patience = 20
+
     print(f"Initiating Training Sequence: {epochs} Epochs")
     for epoch in range(epochs):
-        # 確保模型處於訓練模式
         model.train()
         total_loss = 0
-        
+
         for images, labels in train_loader:
             images, labels = images.to(device), labels.to(device)
-            
+
             optimizer.zero_grad()
             outputs = model(images)
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
-            
+
             total_loss += loss.item()
-            
+
+        scheduler.step()
         avg_loss = total_loss / len(train_loader)
         loss_history.append(avg_loss)
-        
-        current_accuracy = evaluate_current_model(model, test_loader, device)
-        scheduler.step(current_accuracy)
-        
+
+        current_accuracy = evaluate_current_model(model, val_loader, device)
+
         if current_accuracy > best_accuracy or (epoch + 1) % 5 == 0 or epoch == 0:
             log_str = f"Epoch {epoch+1:03d}/{epochs} | Avg Loss: {avg_loss:.4f} | LR: {optimizer.param_groups[0]['lr']:.6f} | Val Acc: {current_accuracy:.2f}%"
-            
+
             if current_accuracy > best_accuracy:
                 best_accuracy = current_accuracy
                 epochs_no_improve = 0
@@ -68,9 +67,9 @@ def train_model(data_path, epochs):
                 log_str += " -> [Checkpoint Updated]"
             else:
                 epochs_no_improve += 1
-                
+
             print(log_str)
-        
+
         if epochs_no_improve >= early_stop_patience:
             print(f"Early stopping triggered after {epoch+1} epochs (no improvement for {early_stop_patience} epochs).")
             break

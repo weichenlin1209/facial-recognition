@@ -30,7 +30,7 @@ def train_svm(data_path, cnn_checkpoint="fer_model.pth", svm_output="svm_model.j
         print(f"Error: CNN checkpoint '{cnn_checkpoint}' not found. Train the CNN first.")
         return
 
-    train_loader, _ = get_dataloaders(data_path, batch_size=32)
+    train_loader, _, _ = get_dataloaders(data_path, batch_size=32)
 
     print("Extracting CNN features for SVM training...")
     X_train, y_train = extract_features(model, train_loader, device)

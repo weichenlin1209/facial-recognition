@@ -74,7 +74,7 @@ def evaluate_svm_on_test(data_path, cnn_checkpoint="fer_model.pth", svm_model_pa
 
     svm_model = joblib.load(svm_model_path)
 
-    _, test_loader = get_dataloaders(data_path, batch_size=8)
+    _, _, test_loader = get_dataloaders(data_path, batch_size=8)
 
     all_preds, all_trues = [], []
 
@@ -113,8 +113,11 @@ def evaluate_svm_on_test(data_path, cnn_checkpoint="fer_model.pth", svm_model_pa
     print(f"CNN+SVM Test Summary: Accuracy {accuracy:.2f}% ({correct}/{total})")
     print("=" * 60)
 
+    cm_normalized = cm.astype('float') / cm.sum(axis=1, keepdims=True)
+    cm_normalized = np.nan_to_num(cm_normalized)
+
     fig, ax = plt.subplots(figsize=(10, 8))
-    cax = ax.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
+    cax = ax.imshow(cm_normalized, interpolation='nearest', cmap=plt.cm.Blues, vmin=0, vmax=1)
     fig.colorbar(cax)
     tick_marks = np.arange(num_classes)
     ax.set_xticks(tick_marks)
@@ -124,12 +127,13 @@ def evaluate_svm_on_test(data_path, cnn_checkpoint="fer_model.pth", svm_model_pa
     ax.set_ylabel('True Label')
     ax.set_xlabel('Predicted Label')
     ax.set_title('CNN+SVM Confusion Matrix')
-    thresh = cm.max() / 2.
+    thresh = 0.5
     for i in range(num_classes):
         for j in range(num_classes):
-            ax.text(j, i, format(cm[i, j], 'd'),
+            val = cm_normalized[i, j]
+            ax.text(j, i, f'{val:.2f}',
                     ha="center", va="center",
-                    color="white" if cm[i, j] > thresh else "black")
+                    color="white" if val > thresh else "black")
     plt.tight_layout()
     plt.savefig('confusion_matrix_svm.svg', format='svg')
     plt.close()
